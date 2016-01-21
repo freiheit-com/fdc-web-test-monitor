@@ -21,20 +21,19 @@
 
 
 (defn- with-loaded-project-data [auth-token f]
-  (GET "https://localhost:8443/meta/projects" {:headers {"auth-token" auth-token "Content-Type" "application/json"}
+  (GET "/meta/projects" {:headers {"auth-token" auth-token "Content-Type" "application/json"
                                                :handler f
                                                :response-format :json
                                                :keywords? true
-                                               :error-handler println}))
+                                               :error-handler println}}))
 
 (defn- with-loaded-project-diff [auth-token f project]
-  (GET (str "https://localhost:8443/statistics/coverage/diff/" project)
+  (GET (str "/statistics/coverage/diff/" project)
        {:headers {"auth-token" auth-token "Content-Type" "application/json"}
         :handler (partial f project)
         :response-format :json
         :keywords? true
         :error-handler println}))
-
 
 (defn- append-project-diff [project diff]
   (swap! ticker-text (partial str (str "++ " project ": " (:diff-percentage diff) "% ++"))))
