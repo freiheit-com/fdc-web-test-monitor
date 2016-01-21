@@ -21,11 +21,11 @@
 
 
 (defn- with-loaded-project-data [auth-token f]
-  (GET "/meta/projects" {:headers {"auth-token" auth-token "Content-Type" "application/json"
-                                               :handler f
-                                               :response-format :json
-                                               :keywords? true
-                                               :error-handler println}}))
+  (GET "/meta/projects" {:headers {"auth-token" auth-token "Content-Type" "application/json"}
+                         :handler f
+                         :response-format :json
+                         :keywords? true
+                         :error-handler println}))
 
 (defn- with-loaded-project-diff [auth-token f project]
   (GET (str "/statistics/coverage/diff/" project)
@@ -39,7 +39,9 @@
   (swap! ticker-text (partial str (str "++ " project ": " (:diff-percentage diff) "% ++"))))
 
 (defn ^:export run []
-  (let [auth-token (js/prompt "Enter auth-token")]
+  (let [auth-token-meta (js/prompt "Enter meta auth-token")
+        auth-token-statistics (js/prompt "Enter statistic auth-token")]
+
     (r/render [ticker] (js/document.getElementById "app"))
-    (with-loaded-project-data auth-token
-      (fn [data] (dorun (map (comp (partial with-loaded-project-diff auth-token append-project-diff) :project) (:projects data)))))))
+    (with-loaded-project-data auth-token-meta
+      (fn [data] (dorun (map (comp (partial with-loaded-project-diff auth-token-statistics append-project-diff) :project) (:projects data)))))))
