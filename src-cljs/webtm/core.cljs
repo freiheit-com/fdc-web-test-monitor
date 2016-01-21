@@ -10,20 +10,37 @@
   (let [new-pos (- pos 1)]
     (if (< new-pos 0) 100 new-pos)))
 
-(defn ticker [text]
+(def ticker-text (r/atom ""))
+
+(defn ticker []
   (let [pos (r/atom 100)]
     (fn []
-      (js/setTimeout #(swap! pos update-pos) 100)
-      [:div {:style {:width "100%"}}
-        [:span {:style {:left (str @pos "%") :position "absolute"}} text]])))
+      (js/setTimeout #(swap! pos update-pos) 150)
+      [:div {:style {:width "100%" :overflow "hidden" :font-size "15pt"}}
+        [:span {:style {:left (str @pos "%") :position "absolute" :width "100%"}} @ticker-text]])))
+
+
+(defn- with-loaded-project-data [auth-token f]
+  (GET "https://localhost:8443/meta/projects" {:headers {"auth-token" auth-token "Content-Type" "application/json"}
+                                               :handler f
+                                               :response-format :json
+                                               :keywords? true
+                                               :error-handler println}))
+
+(defn- with-loaded-project-diff [auth-token f project]
+  (GET (str "https://localhost:8443/statistics/coverage/diff/" project)
+       {:headers {"auth-token" auth-token "Content-Type" "application/json"}
+        :handler (partial f project)
+        :response-format :json
+        :keywords? true
+        :error-handler println}))
+
+
+(defn- append-project-diff [project diff]
+  (swap! ticker-text (partial str (str "++ " project ": " (:diff-percentage diff) "% ++"))))
 
 (defn ^:export run []
-  (with-loaded-data
-    (fn [data]
-      (r/render [(partial ticker "+++ Project-H: +0.03%, Project-B: -0.08%, Project-E: +8,7% +++")]
-                (js/document.getElementById "app")))))
-
-(defn- with-loaded-data [f]
-  (GET "https://localhost:8443/meta/projects" {:headers {"auth-token" "test" "Content-Type" "application/json"}
-                                               :handler f
-                                               :error-handler println}))
+  (let [auth-token (js/prompt "Enter auth-token")]
+    (r/render [ticker] (js/document.getElementById "app"))
+    (with-loaded-project-data auth-token
+      (fn [data] (dorun (map (comp (partial with-loaded-project-diff auth-token append-project-diff) :project) (:projects data)))))))
