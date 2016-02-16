@@ -1,47 +1,28 @@
 (ns webtm.core
-  (:require [reagent.core :as r])
-  (:use [ajax.core :only [GET]]))
+    (:require [reagent.core :as reagent]
+              [re-frame.core :as re-frame]
+              [webtm.handlers]
+              [webtm.subs]
+              [webtm.routes :as routes]
+              [webtm.views :as views]
+              [webtm.config :as config]))
 
-(enable-console-print!)
+(when config/debug?
+  (println "dev mode"))
 
-;TODO Read diff data from statistic server (to be implemented in server)
+(defn mount-root []
+  (reagent/render [views/main-panel]
+                  (.getElementById js/document "app")))
 
-(defn- update-pos [pos]
-  (let [new-pos (- pos 1)]
-    (if (< new-pos 0) 100 new-pos)))
-
-(def ticker-text (r/atom ""))
-
-(defn ticker []
-  (let [pos (r/atom 100)]
-    (fn []
-      (js/setTimeout #(swap! pos update-pos) 150)
-      [:div {:style {:width "100%" :overflow "hidden" :font-size "15pt"}}
-        [:span {:style {:left (str @pos "%") :position "absolute" :width "100%"}} @ticker-text]])))
-
-
-(defn- with-loaded-project-data [auth-token f]
-  (GET "/meta/projects" {:headers {"auth-token" auth-token "Content-Type" "application/json"}
-                         :handler f
-                         :response-format :json
-                         :keywords? true
-                         :error-handler println}))
-
-(defn- with-loaded-project-diff [auth-token f project]
-  (GET (str "/statistics/coverage/diff/" project)
-       {:headers {"auth-token" auth-token "Content-Type" "application/json"}
-        :handler (partial f project)
-        :response-format :json
-        :keywords? true
-        :error-handler println}))
-
-(defn- append-project-diff [project diff]
-  (swap! ticker-text (partial str (str "++ " project ": " (:diff-percentage diff) "% ++"))))
+(defn init []
+  (routes/app-routes)
+  (re-frame/dispatch-sync [:initialize-db])
+  (re-frame/dispatch [:connect-ws])
+  (re-frame/dispatch [:fetch-meta])
+  (mount-root))
 
 (defn ^:export run []
-  (let [auth-token-meta (js/prompt "Enter meta auth-token")
-        auth-token-statistics (js/prompt "Enter statistic auth-token")]
-
-    (r/render [ticker] (js/document.getElementById "app"))
-    (with-loaded-project-data auth-token-meta
-      (fn [data] (dorun (map (comp (partial with-loaded-project-diff auth-token-statistics append-project-diff) :project) (:projects data)))))))
+  (let [meta (js/prompt "Enter meta auth-token")
+        stats (js/prompt "Enter statistic auth-token")]
+    (config/init meta stats)
+    (init)))

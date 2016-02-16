@@ -1,0 +1,75 @@
+.nav, .navbar-links {
+  line-height: 30px;
+}
+
+.nav-brand, .glyphicon-ok {
+  color: lawngreen;
+  left: -10px;
+}
+
+.coverage {
+
+}
+
+.overview .chart {
+  height: 300px;
+  margin: 30px;
+}
+
+.graph {
+  display: table;
+  height: 300px;
+  width: 90%;
+  padding: 0;
+  border-left: 1px solid lightgrey;
+  border-bottom: 1px solid darkgrey;
+}
+
+.column {
+  height: 100%;
+  max-width: 50%;
+  margin: auto;
+  display: table-cell;
+  vertical-align: bottom;
+}
+
+.bar {
+  position: relative;
+  box-shadow: 2px -2px 6px darkgrey;
+}
+
+label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  text-align: center;
+}
+
+.value {
+  line-height: 100%;
+  color: beige;
+  text-align: center;
+  font-size: 20px;
+  top: 33%;
+  font-weight: bold;
+  right: 0;
+  position: absolute;
+  left: 0;
+}
+
+.error {
+  background-color: red;
+}
+
+.warning {
+  background-color: orange;
+}
+
+.okay {
+  background-color: green;
+}
+
+.nice {
+  background-color: lawngreen;
+}
