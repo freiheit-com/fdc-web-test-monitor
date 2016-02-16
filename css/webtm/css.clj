@@ -6,7 +6,7 @@
 (defstyles screen
   [:.nav :.navbar-links {:line-height (px 30)}]
   [:.nav-brand :.glyphicon-ok {:color :lawngreen :left (px -10)}]
-  [:.coverage {}]
+  [:.coverage {:text-align :right} [:thead [:th {:text-align :center}]][:.project-name {:text-align :left :font-weight :bold}]]
   [:.overview [:.chart {:height (px 300) :margin (px 30)}]]
   [[:.graph {:display :table
              :height (px 300)

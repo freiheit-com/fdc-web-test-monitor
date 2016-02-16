@@ -8,7 +8,16 @@
 }
 
 .coverage {
+  text-align: right;
+}
 
+.coverage thead th {
+  text-align: center;
+}
+
+.coverage .project-name {
+  text-align: left;
+  font-weight: bold;
 }
 
 .overview .chart {

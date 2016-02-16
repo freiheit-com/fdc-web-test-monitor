@@ -11,15 +11,17 @@
 (defn coverage-line
   [[name data]]
   ^{:key name}
-  [:tr [:td name] [:td (data :covered)] [:td (data :lines)] [:td (* 100 (data :percentage))]])
+  [:tr [:td {:class :project-name} name] [:td (data :covered)] [:td (data :lines)] [:td (* 100 (data :percentage))]])
 
 
 (defn coverage-table [data]
-  [:table {:class "table coverage"}
-   [:tr [:th "name"] [:th "covered"] [:th "lines"] [:th "%"]]
-   (if data
-     (map coverage-line data)
-     [:div "no data"])])
+
+  (if-not data
+    [:div "no data"]
+    [:table {:class "table coverage"}
+     [:thead [:tr [:th "name"] [:th "covered"] [:th "lines"] [:th "%"]]]
+     [:tbody
+      (map coverage-line data)]]))
 
 (defn coverage-graph-bar [[name data]]
   (let [percent (* 100 (data :percentage))
