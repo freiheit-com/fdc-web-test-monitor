@@ -9,14 +9,14 @@
 (def debug?
   ^boolean js/goog.DEBUG)
 
+(enable-console-print!)
 (when debug?
-  (enable-console-print!)
-  (set! +server-rest+ "http://localhost:3001")
-  (set! +server-ws+ "ws://localhost:3001/ws/"))
+  (reset! +server-rest+ "http://localhost:3001")
+  (reset! +server-ws+ "ws://localhost:3001/ws/"))
 
 (defn init [meta stats]
-  (when (not-empty meta) (set! *meta-token* meta))
-  (when (not-empty stats) (set! *stats-token* stats)))
+  (when (not-empty meta) (reset! *meta-token* meta))
+  (when (not-empty stats) (reset! *stats-token* stats)))
 
 (defn stats-token []
   @*stats-token*)
@@ -25,9 +25,9 @@
   @*meta-token*)
 
 (defn server-rest-url [path]
-  (str +server-rest+ path))
+  (str @+server-rest+ path))
 
 (defn server-ws-url
   ([] (server-ws-url ""))
   ([path]
-  (str +server-ws+ path)))
+  (str @+server-ws+ path)))

@@ -51,6 +51,6 @@
                         :source-paths ["src-cljs"]
                         :compiler {:main webtm.core
                                    :output-to "resources/public/js/main.js"
-                                   :optimizations :advanced
+                                   :optimizations :whitespace
                                    :closure-defines {goog.DEBUG false}
                                    :pretty-print false}}]})
