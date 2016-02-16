@@ -5,7 +5,8 @@
               [webtm.subs]
               [webtm.routes :as routes]
               [webtm.views :as views]
-              [webtm.config :as config]))
+              [webtm.config :as config]
+              [webtm.tokens :as tokens]))
 
 (when config/debug?
   (println "dev mode"))
@@ -23,7 +24,6 @@
 
 (defn ^:export run []
   (let [production? (not config/debug?)
-        meta (when production? (js/prompt "Enter meta auth-token"))
-        stats (when production? (js/prompt "Enter statistic auth-token"))]
-    (config/init meta stats)
+        tokens (when production? (tokens/request-tokens!))]
+    (config/init (:meta-token tokens) (:stat-token stats))
     (init)))

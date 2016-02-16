@@ -20,8 +20,8 @@
     [db _]
     (GET
      (server-rest-url "/meta/projects")
-      {:headers       {"auth-token" (meta-token)}
-       :handler       #(dispatch [:meta-updated %1])})
+     {:headers       {"auth-token" (meta-token)}
+      :handler       #(dispatch [:meta-updated %1])})
     (assoc db :loading? true)))
 
 (register-handler
@@ -72,7 +72,7 @@
  :connect-ws
  (fn  [db _]
    (comment (let [ws (js/WebSocket. (server-ws-url))]
-     (set! (.-onopen ws) )
-     (set! (.-onclose ws) #(println "close" %))
-     (set! (.-onmessage ws) (fn [msg] (.send ws "baz")(.log js/console "msg" msg)))))
+             (set! (.-onopen ws))
+             (set! (.-onclose ws) #(println "close" %))
+             (set! (.-onmessage ws) (fn [msg] (.send ws "baz")(.log js/console "msg" msg)))))
    (assoc db :ws-connected? false)))
