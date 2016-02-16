@@ -71,8 +71,8 @@
 (register-handler
  :connect-ws
  (fn  [db _]
-   (let [ws (js/WebSocket. (server-ws-url))]
+   (comment (let [ws (js/WebSocket. (server-ws-url))]
      (set! (.-onopen ws) )
      (set! (.-onclose ws) #(println "close" %))
-     (set! (.-onmessage ws) (fn [msg] (.send ws "baz")(.log js/console "msg" msg))))
-   (assoc db :connected? false)))
+     (set! (.-onmessage ws) (fn [msg] (.send ws "baz")(.log js/console "msg" msg)))))
+   (assoc db :ws-connected? false)))
