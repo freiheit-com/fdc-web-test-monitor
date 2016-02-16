@@ -66,31 +66,46 @@
         [:div "loading"]
         children))))
 
-(defn overview-graph [data]
+(defn make-graph [data]
   (let [xScale (js/Plottable.Scales.Category.)
         yScale (doto (js/Plottable.Scales.Linear.)
                  (.domainMax 100))
+        colorScale (doto (Plottable.Scales.InterpolatedColor.)
+                     (.range (clj->js ["#ff0000", "#00ff00"])))
         xAxis  (js/Plottable.Axes.Category. xScale "bottom")
         yAxis  (js/Plottable.Axes.Numeric. yScale "left")
         pdata  (js/Plottable.Dataset. (clj->js data))
         plot   (doto (js/Plottable.Plots.Bar.)
                  (.x (fn [prj] (aget prj 0)) xScale)
                  (.y (fn [prj] (* 100 (.-percentage (aget prj 1)))) yScale)
+                 (.attr "fill" (fn [prj] (* 100 (.-percentage (aget prj 1)))) colorScale)
                  (.addDataset pdata))
         chart  (js/Plottable.Components.Table. (clj->js [[yAxis plot] [nil xAxis]]))]
+    {:chart chart :dataset pdata}))
+
+
+(defn plotfn [comp chart dataset]
+  (let [data (clj->js (:data (reagent/props comp)))]
+    (.error js/console data)
+    (.data dataset data))
+  (.renderTo chart "svg#overview-chart"))
+
+(defn overview-graph [data]
+  (let [{:keys [chart dataset]} (make-graph (:data data))]
     (reagent/create-class
-     {:component-did-mount #(.renderTo chart "svg#overview-chart")
+     {:component-did-mount #(plotfn % chart dataset)
+      :component-did-update #(plotfn % chart dataset)
       :display-name "chart"
       :reagent-render
-      (fn [data] [:div {:class "chart"} [:svg {:id "overview-chart"}]])})))
+      (fn [data] [:div {:class "chart" :data data} [:svg {:id "overview-chart"}]])})))
 
 (defn overview-content []
   (let [projects (re-frame/subscribe [:all])]
     (fn []
-      (let [data (into [] (map (fn [a] (println (second a))[(first a) (second (second a))]) @projects))]
+      (let [data @projects]
         (if (not-empty data)
           [:div
-           [overview-graph data]
+           [overview-graph {:data data}]
            [coverage-table data]]
           [:div "no data"])))))
 

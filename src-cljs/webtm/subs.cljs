@@ -25,7 +25,10 @@
 (re-frame/register-sub
  :all
  (fn [db]
-   (reaction (:project @db))))
+   (reaction (let [db-prj (:project @db)
+                   graph-data (into [] (map (fn [a] (println (second a))[(first a) (second (second a))]) db-prj))
+                   sorted (sort #(compare (first %1) (first %2)) graph-data)]
+               sorted))))
 
 (re-frame/register-sub
  :project-loaded
