@@ -10,9 +10,9 @@
   ^boolean js/goog.DEBUG)
 
 (enable-console-print!)
-;; (when debug?
-;;   (reset! +server-rest+ "http://localhost:3001")
-;;   (reset! +server-ws+ "ws://localhost:3001/ws/"))
+(when debug?
+  (reset! +server-rest+ "http://localhost:3001")
+  (reset! +server-ws+ "ws://localhost:3001/ws/"))
 
 (defn init [meta stats]
   (when (not-empty meta) (reset! *meta-token* meta))
