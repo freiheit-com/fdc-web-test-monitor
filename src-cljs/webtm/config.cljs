@@ -11,7 +11,7 @@
 
 (enable-console-print!)
 (when debug?
-  (reset! +server-rest+ "http://localhost:3001")
+  (reset! +server-rest+ "https://localhost:8443")
   (reset! +server-ws+ "ws://localhost:3001/ws/"))
 
 (defn init [meta stats]
@@ -30,4 +30,4 @@
 (defn server-ws-url
   ([] (server-ws-url ""))
   ([path]
-  (str @+server-ws+ path)))
+   (str @+server-ws+ path)))
