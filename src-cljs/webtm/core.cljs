@@ -22,7 +22,8 @@
   (mount-root))
 
 (defn ^:export run []
-  (let [meta (js/prompt "Enter meta auth-token")
-        stats (js/prompt "Enter statistic auth-token")]
+  (let [production? (not config/debug?)
+        meta (when production? (js/prompt "Enter meta auth-token"))
+        stats (when production? (js/prompt "Enter statistic auth-token"))]
     (config/init meta stats)
     (init)))
