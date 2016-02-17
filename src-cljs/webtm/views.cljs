@@ -2,7 +2,6 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [re-com.core :as re-com]
-            [c2.scale :as scale]
             [cljsjs.plottable]
             [webtm.routes :as routes]))
 
