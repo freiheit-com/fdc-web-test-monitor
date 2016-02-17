@@ -18,7 +18,10 @@
                     (s/required-key "languages")
                     [{(s/required-key "language") s/Str}]}]}]})
 
-(def Meta [{:project s/Str :subprojects [{:subproject s/Str :languages [{:language s/Str}]}]}])
+(def Meta {s/Str {:project s/Str :subprojects [{:subproject s/Str :languages [{:language s/Str}]}]}})
+
+(def MaybeCoverage (s/if empty? {} {:covered s/Num :lines s/Num :percentage s/Num}))
+(def Project [(s/one (s/eq "overall-coverage") "overall-coverage") (s/one MaybeCoverage "coverage")])
 
 (defn parse-js
   [response]
@@ -26,17 +29,23 @@
         data (js->clj real-js :keywordize-keys true)] ;; i think this is a bug and opts should be a map
     data))
 
+(defn get-name-and-data [prj]
+  [(get prj :project) prj])
 
 (defn parse-meta
   "parse meta data RESPONSE into usable format"
   [response]
   (s/validate Meta-Wire response)
   (let [data (parse-js response)
-        projects (get data :projects)]
-    (s/validate Meta projects)
-    projects))
+        projects (get data :projects)
+        indexed (flatten (map get-name-and-data projects))
+        prj-as-map (apply hash-map indexed)]
+    (s/validate Meta prj-as-map)
+    prj-as-map))
 
 (defn parse-project
   "parse meta data RESPONSE into usable format"
   [response]
-  (parse-js response))
+  (let [data (parse-js response)]
+    (s/validate Project data)
+    data))

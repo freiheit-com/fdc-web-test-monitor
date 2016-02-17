@@ -28,8 +28,9 @@
   :meta-updated
   (fn
     [db [_ response]]
+    (js/setTimeout #(dispatch [:fetch-meta]) 300000)
     (let [projects (db/parse-meta response)]
-      (doall (map #(dispatch [:fetch-project (% :project)]) projects))
+      (doall (map #(dispatch [:fetch-project %]) (keys projects)))
       (-> db
           (assoc :meta projects)
           (assoc :loading? false)))))
@@ -37,7 +38,7 @@
 (defn request-coverage [{:keys [project subproject language] :as id}]
   (let [base-url [(server-rest-url "/statistics/coverage/latest/") project]
         sub-parts (if subproject ["/" subproject] [])
-        lang-parts (if subproject ["/" language] [])
+        lang-parts (if language ["/" language] [])
         url-parts (concat base-url sub-parts lang-parts)
         url (apply str url-parts)]
     (GET
@@ -51,22 +52,32 @@
   (fn
     [db [_ name]]
     (request-coverage {:project name})
-    ;; (let [projects (get-in db [:meta "projects"])
-    ;;       grouped (group-by #(get % "project") projects)
-    ;;       subprojects (keys grouped)]
-    ;;   ;; (.error js/console (clj->js subprojects))
-    ;;   (doall (map #(request-coverage {:project name :subproject %}) subprojects)))
-    ;; (request-coverage {:project name})
+    db))
+
+(register-handler
+  :fetch-project-details
+  (fn
+    [db [_ name]]
+    (request-coverage {:project name})
+    (let [project (get-in db [:meta name])
+          subprojects (:subprojects project)
+          sub-names (map :subproject subprojects)]
+      (.error js/console (clj->js sub-names))
+
+         (doall (map #(request-coverage {:project name :subproject %}) sub-names)))
     db))
 
 (register-handler
   :project-updated
   (fn
-    [db [_ token response]]
+    [db [_ {:keys [project subproject language] :as token} response]]
     ;; (.error js/console (clj->js token))
     (let [data (db/parse-project response)
-          path (apply into [] token)]
-      (assoc-in db path data))))
+          path (concat [:project project]
+                       (when subproject [:subproject subproject])
+                       (when language [:language language]))
+          db-path (into [] path)]
+      (assoc-in db db-path data))))
 
 (register-handler
  :connect-ws

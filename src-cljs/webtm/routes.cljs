@@ -15,13 +15,14 @@
     (.setEnabled true)))
 
 (defn go-home []
+  (re-frame/dispatch [:fetch-meta])
   (re-frame/dispatch [:set-active-panel :home-panel]))
 
 (defroute home "/" []
   (go-home))
 
 (defroute project "/project/:name" [name]
-  (re-frame/dispatch [:fetch-project name])
+  (re-frame/dispatch [:fetch-project-details name])
   (re-frame/dispatch [:set-active-panel :project-panel {:name name}]))
 
 (defn app-routes []

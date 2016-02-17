@@ -48,15 +48,14 @@
 ;; global
 
 (defn project-link
-  ([project]
-   (project-link project {}))
-    ([project opts]
-   (let [name (project :project)]
-    ^{:key name}
-     [:li opts
-      [re-com/hyperlink-href
-       :label [:span name]
-       :href (routes/project {:name name})]])))
+  ([name]
+   (project-link name {}))
+  ([name opts]
+   ^{:key name}
+   [:li opts
+    [re-com/hyperlink-href
+     :label [:span name]
+     :href (routes/project {:name name})]]))
 
 ;; home
 
@@ -88,7 +87,6 @@
 
 (defn plotfn [comp chart dataset]
   (let [data (clj->js (:data (reagent/props comp)))]
-    (.error js/console data)
     (.data dataset data))
   (.renderTo chart "svg#overview-chart"))
 
@@ -102,7 +100,7 @@
       (fn [data] [:div {:class "chart" :data data} [:svg {:id "overview-chart"}]])})))
 
 (defn overview-content []
-  (let [projects (re-frame/subscribe [:all])]
+  (let [projects (re-frame/subscribe [:overall])]
     (fn []
       (let [data @projects]
         (if (not-empty data)
@@ -147,10 +145,10 @@
 ;; nav
 
 (defn projects-nav []
-  (let [data (re-frame/subscribe [:meta])]
+  (let [project-names (re-frame/subscribe [:project-names])]
     (fn []
       [:ul {:class "nav navbar-nav"}
-       (map #(project-link % {:class "nav"}) @data)])))
+       (map #(project-link % {:class "nav"}) @project-names)])))
 
 (defn navbar []
   [:nav {:class "navbar navbar-default"}
