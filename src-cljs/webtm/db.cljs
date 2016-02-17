@@ -38,8 +38,7 @@
   (s/validate Meta-Wire response)
   (let [data (parse-js response)
         projects (get data :projects)
-        indexed (flatten (map get-name-and-data projects))
-        prj-as-map (apply hash-map indexed)]
+        prj-as-map (into {} (map get-name-and-data projects))]
     (s/validate Meta prj-as-map)
     prj-as-map))
 
