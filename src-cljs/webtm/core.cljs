@@ -19,7 +19,6 @@
   (routes/app-routes)
   (re-frame/dispatch-sync [:initialize-db])
   (re-frame/dispatch [:connect-ws])
-  (re-frame/dispatch [:fetch-meta])
   (mount-root))
 
 (defn ^:export run []
