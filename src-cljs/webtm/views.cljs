@@ -9,7 +9,7 @@
 ;; graph stuff
 
 (defn format-percentage [p]
-  (.toFixed (* 100 p) 3))
+  (str (.toFixed (* 100 p) 3) "%"))
 
 
 (defn coverage-line
@@ -19,8 +19,9 @@
    [:td {:class :project-name} name]
    [:td (data :covered)]
    [:td (data :lines)]
-   [:td (let [p (data :percentage)]
-          (if (nil? p) "?" (format-percentage p)))]])
+   [:td {:class :project-percent}
+    (let [p (data :percentage)]
+      (if (nil? p) "?" (format-percentage p)))]])
 
 
 (defn coverage-table [data]

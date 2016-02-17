@@ -20,6 +20,10 @@
   font-weight: bold;
 }
 
+.coverage .project-percent {
+  font-weight: bold;
+}
+
 .overview .chart {
   height: 300px;
   margin: 30px;
