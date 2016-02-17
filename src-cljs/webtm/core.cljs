@@ -25,5 +25,5 @@
 (defn ^:export run []
   (let [production? (not config/debug?)
         tokens (when production? (tokens/request-tokens!))]
-    (config/init (:meta-token tokens) (:stat-token stats))
+    (config/init (:meta-token tokens) (:stat-token tokens))
     (init)))
