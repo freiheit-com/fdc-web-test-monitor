@@ -10,7 +10,9 @@
    [:thead [:th {:text-align :center}]]
    [:.project-name {:text-align :left :font-weight :bold}]
    [:.project-percent {:font-weight :bold}]]
-  [:.overview [:.chart {:height (px 300) :margin (px 30)}]]
+  [:.overview
+   [:.chart {:height (px 300) :margin (px 30)}]
+   [:.data {:max-width (px 750) :margin :auto}]]
   [[:.graph {:display :table
              :height (px 300)
              :width (percent 90)

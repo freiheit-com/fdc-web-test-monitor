@@ -29,6 +29,11 @@
   margin: 30px;
 }
 
+.overview .data {
+  max-width: 750px;
+  margin: auto;
+}
+
 .graph {
   display: table;
   height: 300px;

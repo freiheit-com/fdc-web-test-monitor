@@ -71,7 +71,7 @@
     [db [_ {:keys [project subproject language] :as token} response]]
     (let [data (db/parse-project response)
           path (concat [:project project]
-                       (when subproject [:subproject subproject])
+                       (if subproject [:subproject subproject] ["overall-coverage"])
                        (when language [:language language]))
           db-path (into [] path)]
       (assoc-in db db-path data))))

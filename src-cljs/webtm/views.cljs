@@ -109,13 +109,14 @@
         (if (not-empty data)
           [:div
            [overview-graph props]
-           [coverage-table data]]
+           [:div {:class "panel panel-default data"}
+            [coverage-table data]]]
           [:div "no data"])))))
 
 
 (defn project-overview-panel
   []
-  [:div {:class "panel panel-default col-6-lg overview"}
+  [:div {:class "panel panel-default overview"}
    [:div {:class "panel-heading"} [:h2 "Overview"]]
    [overview-content]])
 
@@ -143,10 +144,10 @@
       (let [data (re-frame/subscribe [:project-loaded (:name @prj)])]
         (fn []
         (println "render" @prj @data)
-        (let [overall ["overall-coverage" (get @data "overall-coverage")]
+        (let [overall ["overall-coverage" (get-in @data ["overall-coverage" "overall-coverage"])]
               subprojects (get @data :subproject)
               sub-graph (for [[k v] subprojects] [k (get v "overall-coverage")])
-              graph-data (into [overall] sub-graph)]
+              graph-data (into [overall] (sort-by first sub-graph))]
           [re-com/v-box
            :class "row"
            :gap "1em"
