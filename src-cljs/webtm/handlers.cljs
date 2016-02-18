@@ -62,8 +62,6 @@
     (let [project (get-in db [:meta name])
           subprojects (:subprojects project)
           sub-names (map :subproject subprojects)]
-      (.error js/console (clj->js sub-names))
-
          (doall (map #(request-coverage {:project name :subproject %}) sub-names)))
     db))
 
@@ -71,7 +69,6 @@
   :project-updated
   (fn
     [db [_ {:keys [project subproject language] :as token} response]]
-    ;; (.error js/console (clj->js token))
     (let [data (db/parse-project response)
           path (concat [:project project]
                        (when subproject [:subproject subproject])

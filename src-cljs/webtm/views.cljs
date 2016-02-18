@@ -24,7 +24,6 @@
 
 
 (defn coverage-table [data]
-
   (if-not data
     [:div "no data"]
     [:table {:class "table coverage"}
@@ -47,12 +46,6 @@
       [:label name]
       [:span {:class "value"} percent]]]))
 
-
-(defn coverage-graph [data]
-  [:div {:class "panel-body graph"}
-   (if data
-     (map coverage-graph-bar data)
-     nil)])
 
 ;; global
 
@@ -111,10 +104,11 @@
 (defn overview-content []
   (let [projects (re-frame/subscribe [:overall])]
     (fn []
-      (let [data @projects]
+      (let [data @projects
+            props {:data data}] ;; needs to be a map!
         (if (not-empty data)
           [:div
-           [overview-graph {:data data}]
+           [overview-graph props]
            [coverage-table data]]
           [:div "no data"])))))
 
@@ -135,21 +129,28 @@
 
 (defn project-coverage
   [name data]
-  [:div {:class "panel panel-default col-6-lg"}
+  [:div {:class "panel panel-default col-6-lg overview"}
    [:div {:class "panel-heading"} [:h2 name]]
    (if-not data
      "no data"
      [:div
-      [coverage-graph data]
+      [overview-graph {:data data}] ;;needs to be a map!
       [coverage-table data]])])
 
-(defn project-panel [{:keys [name]}]
-  (let [coverage-data (re-frame/subscribe [:project-loaded name])]
+(defn project-panel []
+  (let [prj (re-frame/subscribe [:latest-params])]
     (fn []
-      [re-com/v-box
-       :class "row"
-       :gap "1em"
-       :children [[project-coverage name @coverage-data]]])))
+      (let [data (re-frame/subscribe [:project-loaded (:name @prj)])]
+        (fn []
+        (println "render" @prj @data)
+        (let [overall ["overall-coverage" (get @data "overall-coverage")]
+              subprojects (get @data :subproject)
+              sub-graph (for [[k v] subprojects] [k (get v "overall-coverage")])
+              graph-data (into [overall] sub-graph)]
+          [re-com/v-box
+           :class "row"
+           :gap "1em"
+       :children [[project-coverage name graph-data]]]))))))
 
 ;; nav
 
@@ -177,7 +178,7 @@
 
 (defmulti panels identity)
 (defmethod panels :home-panel [] [home-panel])
-(defmethod panels :project-panel [_ params] [project-panel params])
+(defmethod panels :project-panel [] [project-panel])
 (defmethod panels :default [] [:div])
 
 (defn main-panel []

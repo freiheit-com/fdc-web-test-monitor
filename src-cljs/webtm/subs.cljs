@@ -6,6 +6,7 @@
 
 (def SingleCoverage [(s/one s/Str "name") (s/one db/MaybeCoverage "coverage")])
 (def OverallData [SingleCoverage])
+(def ProjectData {(s/eq "overall-coverage") SingleCoverage :subprojects {s/Str {s/Str SingleCoverage}}})
 
 (re-frame/register-sub
  :active-panel
@@ -28,8 +29,7 @@
    (reaction (:meta @db))))
 
 (defn get-name-and-overall [prj]
-  (let [subproject-tuples (second prj)
-        subprojects (apply hash-map subproject-tuples)
+  (let [subprojects (second prj)
         name (first prj)]
     [name (get subprojects "overall-coverage")]))
 
@@ -45,7 +45,10 @@
 (re-frame/register-sub
  :project-loaded
  (fn [db [_ name]]
-   (reaction (get-in @db [:project name]))))
+   (reaction (let [db-prj (get-in @db [:project name])]
+               ;; (println "prjs" db-prj)
+               ;; (s/validate ProjectData db-prj)
+               db-prj))))
 
 (re-frame/register-sub
  :project-names

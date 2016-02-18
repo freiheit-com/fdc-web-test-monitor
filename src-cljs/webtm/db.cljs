@@ -21,7 +21,7 @@
 (def Meta {s/Str {:project s/Str :subprojects [{:subproject s/Str :languages [{:language s/Str}]}]}})
 
 (def MaybeCoverage (s/if empty? {} {:covered s/Num :lines s/Num :percentage s/Num}))
-(def Project [(s/one (s/eq "overall-coverage") "overall-coverage") (s/one MaybeCoverage "coverage")])
+(def Project {s/Str MaybeCoverage})
 
 (defn parse-js
   [response]
@@ -45,6 +45,7 @@
 (defn parse-project
   "parse meta data RESPONSE into usable format"
   [response]
-  (let [data (parse-js response)]
-    (s/validate Project data)
-    data))
+  (let [data (parse-js response)
+        cov-as-map (into {} [data])]
+    (s/validate Project cov-as-map)
+    cov-as-map))
