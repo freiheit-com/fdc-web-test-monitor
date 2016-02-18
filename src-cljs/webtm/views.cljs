@@ -74,7 +74,8 @@
         yScale (doto (js/Plottable.Scales.Linear.)
                  (.domainMax 100))
         colorScale (doto (Plottable.Scales.InterpolatedColor.)
-                     (.range (clj->js ["#ff0000", "#00ff00"])))
+                     (.range (clj->js ["#ff0000", "#ff0000", "#00ff00"]))
+                     (.domain (clj->js [0, 100])))
         xAxis  (js/Plottable.Axes.Category. xScale "bottom")
         yAxis  (js/Plottable.Axes.Numeric. yScale "left")
         pdata  (js/Plottable.Dataset. (clj->js data))
@@ -141,7 +142,8 @@
 (defn project-panel []
   (let [prj (re-frame/subscribe [:latest-params])]
     (fn []
-      (let [data (re-frame/subscribe [:project-loaded (:name @prj)])]
+      (let [data (re-frame/subscribe [:project-loaded (:name @prj)])
+            project-name (:name @prj)]
         (fn []
         (println "render" @prj @data)
         (let [overall ["overall-coverage" (get-in @data ["overall-coverage" "overall-coverage"])]
@@ -151,7 +153,7 @@
           [re-com/v-box
            :class "row"
            :gap "1em"
-       :children [[project-coverage name graph-data]]]))))))
+           :children [[project-coverage project-name graph-data]]]))))))
 
 ;; nav
 
