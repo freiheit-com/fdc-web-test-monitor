@@ -15,6 +15,11 @@
    (assoc db :active-panel active-panel :latest-params params)))
 
 (register-handler
+ :active-project
+ (fn [db [_ project]]
+   (assoc db :active-project project)))
+
+(register-handler
   :fetch-meta
   (fn
     [db _]
@@ -31,6 +36,7 @@
     (js/setTimeout #(dispatch [:fetch-meta]) 300000)
     (let [projects (db/parse-meta response)]
       (doall (map #(dispatch [:fetch-project %]) (keys projects)))
+      (when (:active-project db) (dispatch [:fetch-project-details (:active-project db)]))
       (-> db
           (assoc :meta projects)
           (assoc :loading? false)))))

@@ -22,7 +22,8 @@
   (go-home))
 
 (defroute project "/project/:name" [name]
-  (re-frame/dispatch [:fetch-project-details name])
+  (re-frame/dispatch-sync [:active-project name])
+  (re-frame/dispatch [:fetch-meta])
   (re-frame/dispatch [:set-active-panel :project-panel {:name name}]))
 
 (defn app-routes []

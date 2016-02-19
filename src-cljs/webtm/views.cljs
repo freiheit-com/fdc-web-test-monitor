@@ -100,7 +100,7 @@
       :component-did-update #(plotfn % chart dataset)
       :display-name "chart"
       :reagent-render
-      (fn [data] [:div {:class "chart" :data data} [:svg {:id "overview-chart"}]])})))
+      (fn [_] [:div {:class "chart"} [:svg {:id "overview-chart"}]])})))
 
 (defn overview-content []
   (let [projects (re-frame/subscribe [:overall])]
@@ -136,24 +136,26 @@
    (if-not data
      "no data"
      [:div
-      [overview-graph {:data data}] ;;needs to be a map!
+      [overview-graph {:data data}] ;;needs to be a map for react props!
       [coverage-table data]])])
 
-(defn project-panel []
-  (let [prj (re-frame/subscribe [:latest-params])]
-    (fn []
-      (let [data (re-frame/subscribe [:project-loaded (:name @prj)])
-            project-name (:name @prj)]
-        (fn []
-        (println "render" @prj @data)
-        (let [overall ["overall-coverage" (get-in @data ["overall-coverage" "overall-coverage"])]
-              subprojects (get @data :subproject)
-              sub-graph (for [[k v] subprojects] [k (get v "overall-coverage")])
-              graph-data (into [overall] (sort-by first sub-graph))]
-          [re-com/v-box
-           :class "row"
-           :gap "1em"
-           :children [[project-coverage project-name graph-data]]]))))))
+(defn project-content  [project-name data]
+  (let [overall-data (get-in @data ["overall-coverage" "overall-coverage"])
+        overall (when overall-data ["overall-coverage" overall-data])
+        subprojects (get @data :subproject)
+        sub-graph (for [[k v] subprojects] [k (get v "overall-coverage")])
+        graph-data (into [overall] (sort-by first sub-graph))]
+    [re-com/v-box
+     :class "row"
+     :gap "1em"
+     :children [[project-coverage project-name (when overall graph-data)]]]))
+
+
+(defn project-panel [param]
+  [(let [project-name (:name param)
+         data (re-frame/subscribe [:project-loaded project-name])]
+     (fn []
+       [project-content project-name data]))])
 
 ;; nav
 
@@ -181,7 +183,7 @@
 
 (defmulti panels identity)
 (defmethod panels :home-panel [] [home-panel])
-(defmethod panels :project-panel [] [project-panel])
+(defmethod panels :project-panel [_ params] [project-panel params])
 (defmethod panels :default [] [:div])
 
 (defn main-panel []
@@ -190,7 +192,6 @@
     (fn []
       [re-com/v-box
        :height "100%"
-       :children [
-                  (navbar)
+       :children [[navbar]
                   [:div {:class "body container"}
-                   (panels @active-panel @latest-params)]]])))
+                   [panels @active-panel @latest-params]]]])))
