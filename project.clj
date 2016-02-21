@@ -10,6 +10,8 @@
                  [cljsjs/plottable "1.12.0-0"]
                  [secretary "1.2.3"]
                  [prismatic/schema "1.0.5"]
+                 [com.taoensso/timbre "4.2.1"]
+                 [com.andrewmcveigh/cljs-time "0.4.0"]
                  [garden "1.3.0"]
                  [cljs-ajax "0.5.3"]
                  [reagent "0.5.1"]]

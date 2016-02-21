@@ -1,6 +1,10 @@
 (ns webtm.handlers
   (:require [re-frame.core :as re-frame :refer [register-handler dispatch]]
             [ajax.core :refer [GET POST]]
+            [taoensso.timbre :refer-macros [log]]
+            [cljs-time.core :as t]
+            [cljs-time.format :as tf]
+            [cljs-time.periodic :as periods]
             [webtm.config :refer [stats-token meta-token server-rest-url server-ws-url]]
             [webtm.db :as db]))
 
@@ -41,11 +45,13 @@
           (assoc :meta projects)
           (assoc :loading? false)))))
 
-(defn request-coverage [{:keys [project subproject language] :as id}]
-  (let [base-url [(server-rest-url "/statistics/coverage/latest/") project]
+(defn request-coverage [{:keys [project subproject language time] :as id}]
+  (let [base-url [(server-rest-url "/statistics/coverage")]
+        time-parts ["/" (or time "latest")]
+        project-parts ["/" project]
         sub-parts (if subproject ["/" subproject] [])
         lang-parts (if language ["/" language] [])
-        url-parts (concat base-url sub-parts lang-parts)
+        url-parts (concat base-url time-parts project-parts sub-parts lang-parts)
         url (apply str url-parts)]
     (GET
      url
@@ -60,26 +66,41 @@
     (request-coverage {:project name})
     db))
 
+
 (register-handler
   :fetch-project-details
   (fn
-    [db [_ name]]
-    (request-coverage {:project name})
+    [db [_ name time]]
+    (request-coverage {:project name :time time})
     (let [project (get-in db [:meta name])
           subprojects (:subprojects project)
           sub-names (map :subproject subprojects)]
-         (doall (map #(request-coverage {:project name :subproject %}) sub-names)))
+         (doall (map #(request-coverage {:project name :subproject % :time time}) sub-names)))
+    db))
+
+
+(register-handler
+  :fetch-project-history
+  (fn
+    [db [_ name]]
+    (let [time-range (take 30 (periods/periodic-seq (t/now) (t/days -1)))
+          formatted-range (map #(tf/unparse (tf/formatters :date) %) time-range)]
+      (log :debug "fetching for dates: " formatted-range)
+      (doall (map #(dispatch [:fetch-project-details name %]) formatted-range))
+      )
     db))
 
 (register-handler
   :project-updated
   (fn
-    [db [_ {:keys [project subproject language] :as token} response]]
+    [db [_ {:keys [project subproject language time] :as token} response]]
     (let [data (db/parse-project response)
           path (concat [:project project]
+                       (if time [:history time])
                        (if subproject [:subproject subproject] ["overall-coverage"])
                        (when language [:language language]))
           db-path (into [] path)]
+      (log :debug path)
       (assoc-in db db-path data))))
 
 (register-handler

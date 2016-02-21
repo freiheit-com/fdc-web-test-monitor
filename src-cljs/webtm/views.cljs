@@ -2,14 +2,21 @@
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
             [re-com.core :as re-com]
+            [taoensso.timbre :refer-macros [log spy]]
             [cljsjs.plottable]
-            [webtm.routes :as routes]))
+            [cljsjs.d3]
+            [webtm.routes :as routes]
+            [clojure.string :as str]))
 
-;; graph stuff
+;; table stuff
 
 (defn format-percentage [p]
   (str (.toFixed (* 100 p) 3) "%"))
 
+(def interpolator (js/d3.interpolateLab "#ff0000" "#00ff00"))
+
+(defn get-coverage-color [percent]
+  (interpolator (* 2 (max 0 (- percent 0.5)))))
 
 (defn coverage-line
   [[name data]]
@@ -22,7 +29,6 @@
     (let [p (data :percentage)]
       (if (nil? p) "?" (format-percentage p)))]])
 
-
 (defn coverage-table [data]
   (if-not data
     [:div "no data"]
@@ -31,20 +37,27 @@
      [:tbody
       (map coverage-line data)]]))
 
-(defn coverage-graph-bar [[name data]]
-  (let [percent (* 100 (data :percentage))
-        level (condp < percent
-                95 "nice"
-                85 "okay"
-                75 "warning"
-                "error")]
-    [:div {:key name
-      :class (str "column")}
-     [:div
-      {:class (str "bar " level)
-       :style {:height (str percent "%")}}
-      [:label name]
-      [:span {:class "value"} percent]]]))
+(defn history-cell [data key]
+  (let [p (get data :percentage)]
+    ^{:key key}
+    [:td {:class [:history-percent] :style {:background-color (get-coverage-color p)}}
+     (if (nil? p) "?" (format-percentage p))]))
+
+
+(defn history-line
+  [[date data] subprojects]
+  ^{:key date}
+  [:tr
+   [:td date]
+   (history-cell (get-in data ["overall-coverage" "overall-coverage"]) (str "cell-" date "-overall"))
+   (map #(history-cell (get-in data [:subproject % "overall-coverage"]) (str "cell-" date "-" %)) subprojects)])
+
+(defn history-table [data subprojects]
+  (if-not data
+    [:div "no data"]
+    [:table {:class "table history"}
+     [:thead [:tr [:th] [:th "overall"] (for [sub subprojects] [:th {:key (str "prj-" sub)} sub])]]
+     [:tbody (map #(history-line % subprojects) data)]]))
 
 
 ;; global
@@ -139,6 +152,21 @@
       [overview-graph {:data data}] ;;needs to be a map for react props!
       [coverage-table data]])])
 
+(defn project-history-panel
+  [data subprojects]
+  [:div {:class "panel panel-default col-6-lg overview"}
+   [:div {:class "panel-heading"} [:h2 "History"]]
+   (if-not data
+     "no data"
+     [:div
+      [history-table data subprojects]])])
+
+(defn project-history [project-name subprojects]
+  [(let [history-data (re-frame/subscribe [:project-history project-name])]
+    (fn []
+      [project-history-panel @history-data subprojects]))])
+
+
 (defn project-content  [project-name data]
   (let [overall-data (get-in @data ["overall-coverage" "overall-coverage"])
         overall (when overall-data ["overall-coverage" overall-data])
@@ -148,13 +176,15 @@
     [re-com/v-box
      :class "row"
      :gap "1em"
-     :children [[project-coverage project-name (when overall graph-data)]]]))
+     :children [[project-coverage project-name (when overall graph-data)]
+                [project-history project-name (sort (map first subprojects))]]]))
 
 
 (defn project-panel [param]
   [(let [project-name (:name param)
          data (re-frame/subscribe [:project-loaded project-name])]
      (fn []
+       (re-frame/dispatch [:fetch-project-history project-name])
        [project-content project-name data]))])
 
 ;; nav

@@ -24,6 +24,15 @@
   font-weight: bold;
 }
 
+.history thead th {
+  text-align: center;
+}
+
+.history .history-percent {
+  color: white;
+  text-align: right;
+}
+
 .overview .chart {
   height: 300px;
   margin: 30px;

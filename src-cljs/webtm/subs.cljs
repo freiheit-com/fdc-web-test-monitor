@@ -2,6 +2,7 @@
     (:require-macros [reagent.ratom :refer [reaction]])
     (:require [webtm.db :as db]
               [re-frame.core :as re-frame]
+              [taoensso.timbre :refer-macros [log]]
               [schema.core :as s :include-macros true]))
 
 (def SingleCoverage [(s/one s/Str "name") (s/one db/MaybeCoverage "coverage")])
@@ -49,6 +50,14 @@
                ;; (println "prjs" db-prj)
                ;; (s/validate ProjectData db-prj)
                db-prj))))
+
+(re-frame/register-sub
+ :project-history
+ (fn [db [_ name]]
+   (reaction (let [prj-hist (get-in @db [:project name :history])]
+               (log :debug "hist" prj-hist)
+               ;; (s/validate ProjectData db-prj)
+               (sort-by first > prj-hist)))))
 
 (re-frame/register-sub
  :project-names
