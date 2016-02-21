@@ -14,17 +14,17 @@
        (secretary/dispatch! (.-token event))))
     (.setEnabled true)))
 
-(defn go-home []
+(defn go-home [params]
   (re-frame/dispatch [:fetch-meta])
-  (re-frame/dispatch [:set-active-panel :home-panel]))
+  (re-frame/dispatch [:set-active-panel :home-panel params]))
 
-(defroute home "/" []
-  (go-home))
+(defroute home "/" [query-params]
+  (go-home query-params))
 
-(defroute project "/project/:name" [name]
+(defroute project "/project/:name" [name query-params]
   (re-frame/dispatch-sync [:active-project name])
   (re-frame/dispatch [:fetch-meta])
-  (re-frame/dispatch [:set-active-panel :project-panel {:name name}]))
+  (re-frame/dispatch [:set-active-panel :project-panel (merge query-params {:name name})]))
 
 (defn app-routes []
   (secretary/set-config! :prefix "#")

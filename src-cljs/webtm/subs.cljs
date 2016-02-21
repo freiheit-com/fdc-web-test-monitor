@@ -2,7 +2,7 @@
     (:require-macros [reagent.ratom :refer [reaction]])
     (:require [webtm.db :as db]
               [re-frame.core :as re-frame]
-              [taoensso.timbre :refer-macros [log]]
+              [taoensso.timbre :refer-macros [log spy]]
               [schema.core :as s :include-macros true]))
 
 (def SingleCoverage [(s/one s/Str "name") (s/one db/MaybeCoverage "coverage")])
@@ -34,22 +34,43 @@
         name (first prj)]
     [name (get-in subprojects ["overall-coverage" "overall-coverage"])]))
 
+(defn- get-sort-fn [sort]
+  (condp = sort
+    "covered" (comp :covered second)
+    "lines" (comp :lines second)
+    "%" (comp :percentage second)
+    (comp str first)))
+
 (re-frame/register-sub
  :overall
- (fn [db]
+ (fn [db [_ sort rev]]
    (reaction (let [db-prj (:project @db)
                    graph-data (mapv get-name-and-overall db-prj)
-                   sorted (sort-by first graph-data)]
+                   sorted (sort-by (get-sort-fn sort) graph-data)]
                (s/validate OverallData sorted)
-               sorted))))
+               (if (= "true" rev) (reverse sorted) sorted)))))
+
+
+(defn- get-prj-sort-fn [sort]
+  (condp = sort
+    "covered" (comp :covered second)
+    "lines" (comp :lines second)
+    "%" (comp :percentage second)
+    (comp str first :subproject)))
 
 (re-frame/register-sub
  :project-loaded
- (fn [db [_ name]]
-   (reaction (let [db-prj (get-in @db [:project name])]
-               ;; (println "prjs" db-prj)
-               ;; (s/validate ProjectData db-prj)
-               db-prj))))
+ (fn [db [_ name sort-param rev]]
+   (reaction (let [subprojects (get-in @db [:project name :subproject])
+                   overall-data (get-in @db [:project name "overall-coverage" "overall-coverage"])]
+               (when (and overall-data subprojects)
+                 (let [overall ["overall-coverage" overall-data]
+                       sub-graph (for [[k v] subprojects] [k (get v "overall-coverage")])
+                       graph-data (spy :error (into [overall] (sort-by first sub-graph)))
+                       sorted (sort-by (get-prj-sort-fn sort-param) graph-data)
+                       subproject-names (sort (map first subprojects))]
+                   ;; (s/validate ProjectData db-prj)
+                   [(if (= "true" rev) (reverse sorted) sorted) subproject-names]))))))
 
 (re-frame/register-sub
  :project-history

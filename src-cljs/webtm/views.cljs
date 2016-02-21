@@ -6,6 +6,7 @@
             [cljsjs.plottable]
             [cljsjs.d3]
             [webtm.routes :as routes]
+            [secretary.core :as secretary]
             [clojure.string :as str]))
 
 ;; table stuff
@@ -29,11 +30,23 @@
     (let [p (data :percentage)]
       (if (nil? p) "?" (format-percentage p)))]])
 
-(defn coverage-table [data]
+(defn make-table-header [caption path params]
+  [:th
+   (let [reverse? (and (= "false" (:rev params)) (= (:sort params) caption))]
+     [re-com/hyperlink-href
+      :label [:span caption]
+      :href (path {:query-params {:sort caption :rev reverse?}})])])
+
+(defn coverage-table [data path params]
   (if-not data
     [:div "no data"]
     [:table {:class "table coverage"}
-     [:thead [:tr [:th "name"] [:th "covered"] [:th "lines"] [:th "%"]]]
+     [:thead
+      [:tr
+       (make-table-header "name" path params)
+       (make-table-header "covered" path params)
+       (make-table-header "lines" path params)
+       (make-table-header "%" path params)]]
      [:tbody
       (map coverage-line data)]]))
 
@@ -74,14 +87,6 @@
 
 ;; home
 
-(defn loader
-  [children]
-  (let [loading (re-frame/subscribe [:loading])]
-    (fn []
-      (if @loading
-        [:div "loading"]
-        children))))
-
 (defn make-graph [data]
   (let [xScale (js/Plottable.Scales.Category.)
         yScale (doto (js/Plottable.Scales.Linear.)
@@ -115,42 +120,43 @@
       :reagent-render
       (fn [_] [:div {:class "chart"} [:svg {:id "overview-chart"}]])})))
 
-(defn overview-content []
-  (let [projects (re-frame/subscribe [:overall])]
+(defn overview-content [params]
+  [(let [projects (re-frame/subscribe [:overall (:sort params) (:rev params)])]
     (fn []
       (let [data @projects
-            props {:data data}] ;; needs to be a map!
+            props {:data data} ;; needs to be a map!
+            ]
         (if (not-empty data)
           [:div
            [overview-graph props]
            [:div {:class "panel panel-default data"}
-            [coverage-table data]]]
-          [:div "no data"])))))
+            [coverage-table data routes/home (merge {:sort "name" :rev "false"} params)]]]
+          [:div "no data"]))))])
 
 
 (defn project-overview-panel
-  []
+  [params]
   [:div {:class "panel panel-default overview"}
    [:div {:class "panel-heading"} [:h2 "Overview"]]
-   [overview-content]])
+   [overview-content params]])
 
-(defn home-panel []
+(defn home-panel [params]
   [re-com/v-box
    :class "home"
    :gap "1em"
-   :children [[loader [project-overview-panel]]]])
+   :children [[project-overview-panel params]]])
 
 ;;project
 
 (defn project-coverage
-  [name data]
+  [name data params]
   [:div {:class "panel panel-default col-6-lg overview"}
    [:div {:class "panel-heading"} [:h2 name]]
    (if-not data
      "no data"
      [:div
       [overview-graph {:data data}] ;;needs to be a map for react props!
-      [coverage-table data]])])
+      [coverage-table data #(routes/project (merge {:name name} %)) (merge {:sort "name" :rev "false"} params)]])])
 
 (defn project-history-panel
   [data subprojects]
@@ -167,25 +173,22 @@
       [project-history-panel @history-data subprojects]))])
 
 
-(defn project-content  [project-name data]
-  (let [overall-data (get-in @data ["overall-coverage" "overall-coverage"])
-        overall (when overall-data ["overall-coverage" overall-data])
-        subprojects (get @data :subproject)
-        sub-graph (for [[k v] subprojects] [k (get v "overall-coverage")])
-        graph-data (into [overall] (sort-by first sub-graph))]
+(defn project-content  [project-name data params]
+  (let [graph-data (first @data)
+        subprojects (second @data)]
     [re-com/v-box
      :class "row"
      :gap "1em"
-     :children [[project-coverage project-name (when overall graph-data)]
-                [project-history project-name (sort (map first subprojects))]]]))
+     :children [[project-coverage project-name  graph-data params]
+                [project-history project-name subprojects]]]))
 
 
-(defn project-panel [param]
-  [(let [project-name (:name param)
-         data (re-frame/subscribe [:project-loaded project-name])]
+(defn project-panel [params]
+  [(let [project-name (:name params)
+         data (re-frame/subscribe [:project-loaded project-name (:sort params) (:rev params)])]
      (fn []
        (re-frame/dispatch [:fetch-project-history project-name])
-       [project-content project-name data]))])
+       [project-content project-name data params]))])
 
 ;; nav
 
@@ -212,7 +215,7 @@
 ;; main
 
 (defmulti panels identity)
-(defmethod panels :home-panel [] [home-panel])
+(defmethod panels :home-panel [_ params] [home-panel params])
 (defmethod panels :project-panel [_ params] [project-panel params])
 (defmethod panels :default [] [:div])
 

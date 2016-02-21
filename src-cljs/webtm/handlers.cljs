@@ -83,7 +83,7 @@
   :fetch-project-history
   (fn
     [db [_ name]]
-    (let [time-range (take 30 (periods/periodic-seq (t/now) (t/days -1)))
+    (let [time-range (take 7 (periods/periodic-seq (t/now) (t/days -1)))
           formatted-range (map #(tf/unparse (tf/formatters :date) %) time-range)]
       (log :debug "fetching for dates: " formatted-range)
       (doall (map #(dispatch [:fetch-project-details name %]) formatted-range))
