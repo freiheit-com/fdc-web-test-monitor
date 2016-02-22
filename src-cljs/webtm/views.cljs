@@ -24,8 +24,9 @@
   ^{:key name}
   [:tr
    [:td {:class :project-name} name]
-   [:td (data :covered)]
    [:td (data :lines)]
+   [:td (data :covered)]
+   [:td (- (data :lines) (data :covered))]
    [:td {:class :project-percent}
     (let [p (data :percentage)]
       (if (nil? p) "?" (format-percentage p)))]])
@@ -44,8 +45,9 @@
      [:thead
       [:tr
        (make-table-header "name" path params)
-       (make-table-header "covered" path params)
        (make-table-header "lines" path params)
+       (make-table-header "covered" path params)
+       (make-table-header "missed" path params)
        (make-table-header "%" path params)]]
      [:tbody
       (map coverage-line data)]]))

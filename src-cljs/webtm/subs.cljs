@@ -36,8 +36,9 @@
 
 (defn- get-sort-fn [sort]
   (condp = sort
-    "covered" (comp :covered second)
     "lines" (comp :lines second)
+    "covered" (comp :covered second)
+    "missed" #(let [cov (second %)] (- (:lines cov) (:covered cov)))
     "%" (comp :percentage second)
     (comp str first)))
 
@@ -53,8 +54,9 @@
 
 (defn- get-prj-sort-fn [sort]
   (condp = sort
-    "covered" (comp :covered second)
     "lines" (comp :lines second)
+    "covered" (comp :covered second)
+    "missed" #(let [cov (second %)] (- (:lines cov) (:covered cov)))
     "%" (comp :percentage second)
     (comp str first :subproject)))
 
