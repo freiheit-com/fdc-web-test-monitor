@@ -68,7 +68,7 @@
                (when (and overall-data subprojects)
                  (let [overall ["overall-coverage" overall-data]
                        sub-graph (for [[k v] subprojects] [k (get v "overall-coverage")])
-                       graph-data (spy :error (into [overall] (sort-by first sub-graph)))
+                       graph-data (into [overall] (sort-by first sub-graph))
                        sorted (sort-by (get-prj-sort-fn sort-param) graph-data)
                        subproject-names (sort (map first subprojects))]
                    ;; (s/validate ProjectData db-prj)
