@@ -135,11 +135,9 @@
 
 (defn get-y [data project-name]
   (-> data
-      (aget 1)
-      (aget "subproject")
-      (aget project-name)
-      (aget "overall-coverage")
-      (.-percentage)
+      (js->clj)
+      (second)
+      (get-in ["subproject" project-name "overall-coverage" "percentage"])
       (* 100)))
 
 
