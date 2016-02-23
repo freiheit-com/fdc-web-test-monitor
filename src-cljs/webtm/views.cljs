@@ -89,7 +89,7 @@
 
 ;; home
 
-(defn make-graph [data]
+(defn make-overview-graph [data]
   (let [xScale (js/Plottable.Scales.Category.)
         yScale (doto (js/Plottable.Scales.Linear.)
                  (.domainMax 100))
@@ -108,19 +108,66 @@
     {:chart chart :dataset pdata}))
 
 
-(defn plotfn [comp chart dataset]
+(defn updatefn [comp chart dataset id]
   (let [data (clj->js (:data (reagent/props comp)))]
     (.data dataset data))
-  (.renderTo chart "svg#overview-chart"))
+  (.renderTo chart (str "svg#" id)))
 
 (defn overview-graph [data]
-  (let [{:keys [chart dataset]} (make-graph (:data data))]
-    (reagent/create-class
-     {:component-did-mount #(plotfn % chart dataset)
-      :component-did-update #(plotfn % chart dataset)
+  (let [{:keys [chart dataset]} (make-overview-graph (:data data))
+        id "overview-chart"]
+    [(reagent/create-class
+     {:component-did-mount #(updatefn % chart dataset id)
+      :component-did-update #(updatefn % chart dataset id)
       :display-name "chart"
       :reagent-render
-      (fn [_] [:div {:class "chart"} [:svg {:id "overview-chart"}]])})))
+      (fn [_] [:div {:class "chart"} [:svg {:id id}]])})]))
+
+
+(defn graph-wrapper [data func id]
+  (let [{:keys [chart dataset]} (func (:data data))]
+    (reagent/create-class
+     {:component-did-mount #(updatefn % chart dataset id)
+      :component-did-update #(updatefn % chart dataset id)
+      :display-name "chart"
+      :reagent-render
+      (fn [_] [:div {:class "chart"} [:svg {:id id}]])})))
+
+(defn get-y [data project-name]
+  (-> data
+      (aget 1)
+      (aget "subproject")
+      (aget project-name)
+      (aget "overall-coverage")
+      (.-percentage)
+      (* 100)))
+
+
+(defn make-line [project-name xScale yScale colorScale pdata]
+  (doto (js/Plottable.Plots.Line.)
+    (.x (fn [prj] (aget prj 0)) xScale)
+    (.y #(get-y % project-name) yScale)
+    (.attr "stroke" project-name colorScale)
+    (.addDataset pdata)))
+
+
+(defn make-history-graph [data subprojects]
+  (let [xScale (js/Plottable.Scales.Category.)
+        yScale (doto (js/Plottable.Scales.Linear.)
+                 (.domain #js [0 100]))
+        colorScale (doto (Plottable.Scales.Color.)
+                     (.domain (clj->js subprojects)))
+        xAxis  (js/Plottable.Axes.Category. xScale "bottom")
+        yAxis  (js/Plottable.Axes.Numeric. yScale "left")
+        pdata  (js/Plottable.Dataset. (clj->js data))
+        plots  (map #(make-line % xScale yScale colorScale pdata) subprojects)
+        group  (Plottable.Components.Group. (clj->js plots))
+        chart  (js/Plottable.Components.Table. (clj->js [[yAxis group] [nil xAxis]]))]
+    {:chart chart :dataset pdata}))
+
+(defn history-graph [{:keys [data subprojects] :as props}]
+  [graph-wrapper props #(make-history-graph data subprojects) "historygraph"])
+
 
 (defn overview-content [params]
   [(let [projects (re-frame/subscribe [:overall (:sort params) (:rev params)])]
@@ -167,6 +214,7 @@
    (if-not data
      "no data"
      [:div
+      [history-graph {:data data :subprojects subprojects}]
       [history-table data subprojects]])])
 
 (defn project-history [project-name subprojects]
