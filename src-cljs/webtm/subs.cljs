@@ -3,6 +3,7 @@
     (:require [webtm.db :as db]
               [re-frame.core :as re-frame]
               [taoensso.timbre :refer-macros [log spy]]
+              [cljs-time.format :as tf]
               [schema.core :as s :include-macros true]))
 
 (def SingleCoverage [(s/one s/Str "name") (s/one db/MaybeCoverage "coverage")])
@@ -77,10 +78,11 @@
 (re-frame/register-sub
  :project-history
  (fn [db [_ name]]
-   (reaction (let [prj-hist (get-in @db [:project name :history])]
-               (log :debug "hist" prj-hist)
+   (reaction (let [prj-hist (get-in @db [:project name :history])
+                   converted (into {} (for [[k v] prj-hist] [(tf/parse (:date tf/formatters) k) v] ))]
+               (log :debug "hist" converted)
                ;; (s/validate ProjectData db-prj)
-               (sort-by first > prj-hist)))))
+               (sort-by first > converted)))))
 
 (re-frame/register-sub
  :project-names

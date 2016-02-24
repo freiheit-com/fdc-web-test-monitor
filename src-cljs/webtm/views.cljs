@@ -5,6 +5,7 @@
             [taoensso.timbre :refer-macros [log spy]]
             [cljsjs.plottable]
             [cljsjs.d3]
+            [cljs-time.format :as tf]
             [webtm.routes :as routes]
             [secretary.core :as secretary]
             [clojure.string :as str]))
@@ -64,7 +65,7 @@
   [[date data] subprojects]
   ^{:key date}
   [:tr
-   [:td date]
+   [:td (tf/unparse (:date tf/formatters) date)]
    (history-cell (get-in data ["overall-coverage" "overall-coverage"]) (str "cell-" date "-overall"))
    (map #(history-cell (get-in data [:subproject % "overall-coverage"]) (str "cell-" date "-" %)) subprojects)])
 
@@ -135,17 +136,19 @@
 
 
 (defn make-history-graph [data subprojects]
-  (let [xScale (js/Plottable.Scales.Category.)
+  (let [xScale (js/Plottable.Scales.Time.)
         yScale (doto (js/Plottable.Scales.Linear.)
                  (.domain #js [0 100]))
         colorScale (doto (Plottable.Scales.Color.)
                      (.domain (clj->js subprojects)))
-        xAxis  (js/Plottable.Axes.Category. xScale "bottom")
+        xAxis  (js/Plottable.Axes.Time. xScale "bottom")
         yAxis  (js/Plottable.Axes.Numeric. yScale "left")
+        legend (doto (js/Plottable.Components.Legend. colorScale)
+                 (.maxEntriesPerRow 4))
         pdata  (js/Plottable.Dataset. (clj->js data))
         plots  (map #(make-line % xScale yScale colorScale pdata) subprojects)
         group  (Plottable.Components.Group. (clj->js plots))
-        chart  (js/Plottable.Components.Table. (clj->js [[yAxis group] [nil xAxis]]))]
+        chart  (js/Plottable.Components.Table. (clj->js [[nil legend] [yAxis group] [nil xAxis]]))]
     {:chart chart :dataset pdata}))
 
 (defn history-graph [{:keys [data subprojects] :as props}]
