@@ -52,12 +52,13 @@
      [:tbody
       (map coverage-line data)]]))
 
+;; history table
+
 (defn history-cell [data key]
   (let [p (get data :percentage)]
     ^{:key key}
     [:td {:class [:history-percent] :style {:background-color (get-coverage-color p)}}
      (if (nil? p) "?" (format-percentage p))]))
-
 
 (defn history-line
   [[date data] subprojects]
@@ -75,19 +76,23 @@
      [:tbody (map #(history-line % subprojects) data)]]))
 
 
-;; global
+;; graph helper
 
-(defn project-link
-  ([name]
-   (project-link name {}))
-  ([name opts]
-   ^{:key name}
-   [:li opts
-    [re-com/hyperlink-href
-     :label [:span name]
-     :href (routes/project {:name name})]]))
+(defn updatefn [comp chart dataset id]
+  (let [data (clj->js (:data (reagent/props comp)))]
+    (.data dataset data))
+  (.renderTo chart (str "svg#" id)))
 
-;; home
+(defn graph-wrapper [data func id]
+  (let [{:keys [chart dataset]} (func (:data data))]
+    (reagent/create-class
+     {:component-did-mount #(updatefn % chart dataset id)
+      :component-did-update #(updatefn % chart dataset id)
+      :display-name "chart"
+      :reagent-render
+      (fn [_] [:div {:class "chart"} [:svg {:id id}]])})))
+
+;; overview graph
 
 (defn make-overview-graph [data]
   (let [xScale (js/Plottable.Scales.Category.)
@@ -108,30 +113,10 @@
     {:chart chart :dataset pdata}))
 
 
-(defn updatefn [comp chart dataset id]
-  (let [data (clj->js (:data (reagent/props comp)))]
-    (.data dataset data))
-  (.renderTo chart (str "svg#" id)))
+(defn overview-graph [{:keys [data subprojects] :as props}]
+  [graph-wrapper props #(make-overview-graph data) "overview-chart"])
 
-(defn overview-graph [data]
-  (let [{:keys [chart dataset]} (make-overview-graph (:data data))
-        id "overview-chart"]
-    [(reagent/create-class
-     {:component-did-mount #(updatefn % chart dataset id)
-      :component-did-update #(updatefn % chart dataset id)
-      :display-name "chart"
-      :reagent-render
-      (fn [_] [:div {:class "chart"} [:svg {:id id}]])})]))
-
-
-(defn graph-wrapper [data func id]
-  (let [{:keys [chart dataset]} (func (:data data))]
-    (reagent/create-class
-     {:component-did-mount #(updatefn % chart dataset id)
-      :component-did-update #(updatefn % chart dataset id)
-      :display-name "chart"
-      :reagent-render
-      (fn [_] [:div {:class "chart"} [:svg {:id id}]])})))
+;; history graph
 
 (defn get-y [data project-name]
   (-> data
@@ -166,6 +151,7 @@
 (defn history-graph [{:keys [data subprojects] :as props}]
   [graph-wrapper props #(make-history-graph data subprojects) "historygraph"])
 
+;; home
 
 (defn overview-content [params]
   [(let [projects (re-frame/subscribe [:overall (:sort params) (:rev params)])]
@@ -179,7 +165,6 @@
            [:div {:class "panel panel-default data"}
             [coverage-table data routes/home (merge {:sort "name" :rev "false"} params)]]]
           [:div "no data"]))))])
-
 
 (defn project-overview-panel
   [params]
@@ -239,6 +224,16 @@
        [project-content project-name data params]))])
 
 ;; nav
+
+(defn project-link
+  ([name]
+   (project-link name {}))
+  ([name opts]
+   ^{:key name}
+   [:li opts
+    [re-com/hyperlink-href
+     :label [:span name]
+     :href (routes/project {:name name})]]))
 
 (defn projects-nav []
   (let [project-names (re-frame/subscribe [:project-names])]
