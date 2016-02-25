@@ -113,9 +113,43 @@
         chart  (js/Plottable.Components.Table. (clj->js [[yAxis plot] [nil xAxis]]))]
     {:chart chart :dataset pdata}))
 
-
 (defn overview-graph [{:keys [data subprojects] :as props}]
   [graph-wrapper props #(make-overview-graph data) "overview-chart"])
+
+
+(defn get-stacked [prj i ds]
+  (let [data (second (js->clj prj))
+          covered (get data "covered")
+          value (if (zero? (.metadata ds))
+                  covered
+                  (- (get data "lines") covered))]
+        (* value 100)))
+
+
+(defn make-absolute-graph [data]
+  (let [xScale (js/Plottable.Scales.Category.)
+        yScale (doto (js/Plottable.Scales.Linear.))
+        colorScale (doto (Plottable.Scales.InterpolatedColor.)
+                     (.range (clj->js ["#00d000" "#f70000"])))
+        xAxis  (js/Plottable.Axes.Category. xScale "bottom")
+        yAxis  (js/Plottable.Axes.Numeric. yScale "left")
+        pdata  (doto (js/Plottable.Dataset. (clj->js data))
+                 (.metadata 0))
+        pdata2  (doto (js/Plottable.Dataset. (clj->js data))
+                 (.metadata 1))
+        plot   (doto (js/Plottable.Plots.StackedBar.)
+                 (.x (fn [prj] (aget prj 0)) xScale)
+                 (.y get-stacked yScale)
+                 (.attr "fill" (fn [prj i ds] (.metadata ds)) colorScale)
+                 (.addDataset pdata)
+                 (.addDataset pdata2))
+        chart  (js/Plottable.Components.Table. (clj->js [[yAxis plot] [nil xAxis]]))]
+    {:chart chart :dataset pdata}))
+
+
+(defn absolute-graph [{:keys [data subprojects]}]
+  (let [subprojects-only (remove #(= "overall-coverage" (first %)) data)]
+    [graph-wrapper {:data subprojects-only} #(make-absolute-graph subprojects-only) "absolute-chart"]))
 
 ;; history graph
 
@@ -191,6 +225,7 @@
      "no data"
      [:div
       [overview-graph {:data data}] ;;needs to be a map for react props!
+      [absolute-graph {:data data}] ;;needs to be a map for react props!
       [coverage-table data #(routes/project (merge {:name name} %)) (merge {:sort "name" :rev "false"} params)]])])
 
 (defn project-history-panel
