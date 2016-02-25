@@ -4,9 +4,14 @@
 (def +meta-cookie+ "meta-token")
 (def +stat-cookie+ "stat-token")
 
+(defn- empty-string->nil [val]
+  (if (= "" (string/trim val))
+    nil
+    val))
+
 (defn- read-val [cookie]
   (when cookie
-    (nth (string/split cookie "=") 1)))
+    (empty-string->nil (nth (string/split cookie "=") 1))))
 
 (defn- cookie-value [name]
   (let [cookie (some #(when (= 0 (.indexOf (string/trim %) name)) (string/trim %)) (string/split js/document.cookie ";"))]
