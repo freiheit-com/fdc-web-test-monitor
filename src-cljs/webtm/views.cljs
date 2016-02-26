@@ -79,16 +79,20 @@
 
 ;; graph helper
 
-(defn updatefn [comp chart dataset id]
+(defn update-single-dataset [dataset data]
+  (.data dataset data))
+
+
+(defn update-component [comp chart dataset id update-dataset-fn]
   (let [data (clj->js (:data (reagent/props comp)))]
-    (.data dataset data))
+    (update-dataset-fn dataset data))
   (.renderTo chart (str "svg#" id)))
 
-(defn graph-wrapper [data func id]
-  (let [{:keys [chart dataset]} (func (:data data))]
+(defn graph-wrapper [data create-fn update-fn id]
+  (let [{:keys [chart dataset]} (create-fn (:data data))]
     (reagent/create-class
-     {:component-did-mount #(updatefn % chart dataset id)
-      :component-did-update #(updatefn % chart dataset id)
+     {:component-did-mount #(update-component % chart dataset id update-fn)
+      :component-did-update #(update-component % chart dataset id update-fn)
       :display-name "chart"
       :reagent-render
       (fn [_] [:div {:class "chart"} [:svg {:id id}]])})))
@@ -114,7 +118,7 @@
     {:chart chart :dataset pdata}))
 
 (defn overview-graph [{:keys [data subprojects] :as props}]
-  [graph-wrapper props #(make-overview-graph data) "overview-chart"])
+  [graph-wrapper props #(make-overview-graph data) update-single-dataset "overview-chart"])
 
 
 (defn get-stacked [prj i ds]
@@ -123,7 +127,7 @@
           value (if (zero? (.metadata ds))
                   covered
                   (- (get data "lines") covered))]
-        (* value 100)))
+    value))
 
 
 (defn make-absolute-graph [data]
@@ -144,12 +148,19 @@
                  (.addDataset pdata)
                  (.addDataset pdata2))
         chart  (js/Plottable.Components.Table. (clj->js [[yAxis plot] [nil xAxis]]))]
-    {:chart chart :dataset pdata}))
+    {:chart chart :dataset {:covered pdata :missing pdata2}}))
 
+(defn update-absolute-datasets [{:keys [covered missing]} data]
+  (.data missing data)
+  (.data covered data))
 
 (defn absolute-graph [{:keys [data subprojects]}]
   (let [subprojects-only (remove #(= "overall-coverage" (first %)) data)]
-    [graph-wrapper {:data subprojects-only} #(make-absolute-graph subprojects-only) "absolute-chart"]))
+    [graph-wrapper
+     {:data subprojects-only}
+     #(make-absolute-graph subprojects-only)
+     update-absolute-datasets
+     "absolute-chart"]))
 
 ;; history graph
 
@@ -186,7 +197,7 @@
     {:chart chart :dataset pdata}))
 
 (defn history-graph [{:keys [data subprojects] :as props}]
-  [graph-wrapper props #(make-history-graph data subprojects) "historygraph"])
+  [graph-wrapper props #(make-history-graph data subprojects) update-single-dataset "historygraph"])
 
 ;; home
 
