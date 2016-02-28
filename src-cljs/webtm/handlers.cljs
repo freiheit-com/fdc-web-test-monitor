@@ -8,6 +8,8 @@
             [webtm.config :refer [stats-token meta-token server-rest-url server-ws-url]]
             [webtm.db :as db]))
 
+(def +time+ 10000)
+
 (register-handler
  :initialize-db
  (fn  [_ _]
@@ -16,12 +18,43 @@
 (register-handler
  :set-active-panel
  (fn [db [_ active-panel params]]
+   (log :info "active-panel" active-panel "params" params)
    (assoc db :active-panel active-panel :latest-params params)))
 
 (register-handler
  :active-project
  (fn [db [_ project]]
    (assoc db :active-project project)))
+
+(defn project-names [db]
+  (sort (map first (:project db))))
+
+(defn dispatch-active [name]
+  (dispatch [:active-project name])
+  (dispatch [:fetch-meta])
+  (dispatch [:set-active-panel :project-panel {:name name}]))
+
+
+(register-handler
+ :auto
+ (fn [db [_ auto]]
+   (let [auto-on (= :on auto)]
+     (if auto-on
+       (do (js/setTimeout #(dispatch [:next-panel]) +time+)
+           (dispatch-active (first (project-names db))))
+       (dispatch [:set-active-panel :home-panel]))
+     (assoc db :auto auto-on))))
+
+(register-handler
+ :next-panel
+ (fn [db _]
+   (let [active-prj-name (:name (:latest-params db))
+         name-array (to-array (project-names db))
+         idx (.indexOf name-array active-prj-name)
+         next (nth (cycle name-array) (+ 1 idx))]
+     (dispatch-active next)
+     (if (:auto db) (js/setTimeout #(dispatch [:next-panel]) +time+)))
+   db))
 
 (register-handler
   :fetch-meta

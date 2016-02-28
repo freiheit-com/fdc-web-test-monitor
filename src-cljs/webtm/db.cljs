@@ -3,7 +3,8 @@
 
 (def default-db
   {:meta {}
-   :project {}})
+   :project {}
+   :auto false})
 
 "Returns information about all registered projects in the following format:
 -> {\"projects\": [{\"project\": \"foo\",

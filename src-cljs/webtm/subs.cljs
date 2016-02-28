@@ -89,3 +89,8 @@
  (fn [db]
    (reaction (let [projectnames (keys (:project @db))]
                (sort projectnames)))))
+
+(re-frame/register-sub
+ :auto
+ (fn [db]
+   (reaction (:auto @db))))

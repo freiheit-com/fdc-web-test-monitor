@@ -345,7 +345,15 @@
       [:ul {:class "nav navbar-nav"}
        (map #(make-nav-entry % active) @project-names)]))])
 
-(defn navbar [active]
+(defn nav-auto-button [auto]
+  [:form {:class "navbar-form navbar-right"}
+   [:button {:class (str (when auto "active btn-primary ") "btn")
+               :data-toggle "button"
+               :on-click #(re-frame/dispatch [:auto (if auto :off :on)])}
+      "Auto"]])
+
+
+(defn navbar [active-project auto]
   [:nav {:class "navbar navbar-default"}
    [:div {:class "container-fluid"}
     [:div {:class "navbar-brand"}
@@ -355,7 +363,8 @@
               [:span {:class "glyphicon glyphicon-ok"}]]
       :href (routes/home)]]
     [:div {:class "navbar-header navbar-links"}
-     [projects-nav active]]]])
+     [projects-nav active-project]]
+    [nav-auto-button auto]]])
 
 
 ;; main
@@ -366,11 +375,12 @@
 (defmethod panels :default [] [:div])
 
 (defn main-panel []
-  (let [active-panel (re-frame/subscribe [:active-panel])
+  (let [auto (re-frame/subscribe [:auto])
+        active-panel (re-frame/subscribe [:active-panel])
         latest-params (re-frame/subscribe [:latest-params])]
     (fn []
       [re-com/v-box
        :height "100%"
-       :children [[navbar (:name @latest-params)]
+       :children [[navbar (:name @latest-params) @auto]
                   [:div {:class "body container"}
                    [panels @active-panel @latest-params]]]])))
