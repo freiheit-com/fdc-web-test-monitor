@@ -258,9 +258,9 @@
             ]
         (if (not-empty data)
           [:div
-           [scatter-graph props]
            [overview-graph props]
            [absolute-graph props] ;;needs to be a map for react props!
+           [scatter-graph props]
            [:div {:class "panel panel-default data"}
             [coverage-table data routes/home (merge {:sort "name" :rev "false"} params)]]]
           [:div "no data"]))))])
@@ -285,11 +285,13 @@
    [:div {:class "panel-heading"} [:h2 name]]
    (if-not data
      "no data"
-     [:div
-      [scatter-graph {:data data :subprojects subprojects}]
-      [overview-graph {:data data}] ;;needs to be a map for react props!
-      [absolute-graph {:data data}] ;;needs to be a map for react props!
-      [coverage-table data #(routes/project (merge {:name name} %)) (merge {:sort "name" :rev "false"} params)]])])
+     [re-com/v-box
+     :class "row"
+     :gap "1em"
+     :children [[overview-graph {:data data}] ;;needs to be a map for react props!
+                [absolute-graph {:data data}] ;;needs to be a map for react props!
+                [scatter-graph {:data data :subprojects subprojects}]
+                [coverage-table data #(routes/project (merge {:name name} %)) (merge {:sort "name" :rev "false"} params)]]])])
 
 (defn project-history-panel
   [data subprojects]
@@ -306,7 +308,6 @@
     (fn []
       [project-history-panel @history-data subprojects]))])
 
-
 (defn project-content  [project-name data params]
   (let [graph-data (first @data)
         subprojects (second @data)]
@@ -316,7 +317,6 @@
      :children [[project-coverage project-name graph-data params subprojects]
                 [project-history project-name subprojects]]]))
 
-
 (defn project-panel [params]
   [(let [project-name (:name params)
          data (re-frame/subscribe [:project-loaded project-name (:sort params) (:rev params)])]
@@ -324,6 +324,35 @@
        (re-frame/dispatch [:fetch-project-history project-name])
        [project-content project-name data params]))])
 
+;; slide
+
+(defn slide-content  [project-name data params history-data]
+  (let [graph-data (first @data)
+        subprojects (second @data)]
+    [re-com/v-box
+     :class "row overview"
+     :gap "1em"
+     :style {:height "100%" :width "100%"}
+     :children [[re-com/h-box
+                 :gap "1em"
+                 :style {:height "40vh" :width "100%"}
+                 :children [[:div {:style {:width "50%"}} [overview-graph {:data graph-data}]]
+                            [:div {:style {:width "50%"}} [absolute-graph {:data graph-data}]]]]
+                [re-com/h-box
+                 :gap "1em"
+                 :style {:height "40vh" :width "100%"}
+                 :children [[:div {:style {:width "50%"}} [scatter-graph {:data graph-data :subprojects subprojects}]]
+                            [:div {:style {:width "50%"}} [history-graph {:data history-data :subprojects subprojects}]]]]]]))
+
+(defn slide-panel [params]
+  [(let [project-name (:name params)
+         data (re-frame/subscribe [:project-loaded project-name (:sort params) (:rev params)])
+         history (re-frame/dispatch [:fetch-project-history project-name])
+         history-data (re-frame/subscribe [:project-history project-name])]
+     (fn []
+       (if-not (first @data)
+         [:div "no data"]
+         [slide-content project-name data params @history-data])))])
 ;; nav
 
 (defn project-link [name classes]
@@ -372,6 +401,7 @@
 (defmulti panels identity)
 (defmethod panels :home-panel [_ params] [home-panel params])
 (defmethod panels :project-panel [_ params] [project-panel params])
+(defmethod panels :slide-panel [_ params] [slide-panel params])
 (defmethod panels :default [] [:div])
 
 (defn main-panel []
@@ -382,5 +412,6 @@
       [re-com/v-box
        :height "100%"
        :children [[navbar (:name @latest-params) @auto]
-                  [:div {:class "body container"}
+                  [:div {:class (str "body" (when (not (= :slide-panel @active-panel)) " container"))
+                         :style {:min-height "80vh"}}
                    [panels @active-panel @latest-params]]]])))

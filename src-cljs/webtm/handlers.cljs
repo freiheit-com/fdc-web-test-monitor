@@ -32,7 +32,7 @@
 (defn dispatch-active [name]
   (dispatch [:active-project name])
   (dispatch [:fetch-meta])
-  (dispatch [:set-active-panel :project-panel {:name name}]))
+  (dispatch [:set-active-panel :slide-panel {:name name}]))
 
 
 (register-handler
