@@ -120,6 +120,54 @@
 (defn overview-graph [{:keys [data subprojects] :as props}]
   [graph-wrapper props #(make-overview-graph data) update-single-dataset "overview-chart"])
 
+(defn make-scatter-line [percent xScale yScale percScale]
+  (doto (js/Plottable.Plots.Line.)
+    (.addDataset (js/Plottable.Dataset. (clj->js [[0 percent] [400000 percent]])))
+    (.x #(aget % 0) xScale)
+    (.y #(aget % 1) yScale)
+    (.attr "stroke" percent percScale)
+    (.attr "opacity" 0.5)))
+
+
+(defn make-scatter-graph [data subprojects]
+  (let [xScale (doto (js/Plottable.Scales.ModifiedLog.)
+                 (.domainMin 100))
+        yScale (doto (js/Plottable.Scales.Linear.)
+                 (.domainMax 100))
+        colorScale (doto (Plottable.Scales.Color.)
+                     (.domain (clj->js subprojects)))
+        percScale (doto (Plottable.Scales.InterpolatedColor.)
+                     (.range (clj->js ["#ff0000", "#ff0000", "#00ff00"]))
+                     (.domain (clj->js [0, 100])))
+        xAxis  (js/Plottable.Axes.Numeric. xScale "bottom")
+        yAxis  (js/Plottable.Axes.Numeric. yScale "left")
+        legend (doto (js/Plottable.Components.Legend. colorScale)
+                 (.maxEntriesPerRow 4))
+        pdata  (js/Plottable.Dataset. (clj->js data))
+        plot   (doto (js/Plottable.Plots.Scatter.)
+                 (.x (fn [prj] (.-lines (aget prj 1))) xScale)
+                 (.y (fn [prj] (* 100 (.-percentage (aget prj 1)))) yScale)
+                 (.attr "fill" (fn [prj] (aget prj 0)) colorScale)
+                 (.size 15)
+                 (.attr "opacity" 1)
+                 (.addDataset pdata))
+        lines  (map #(make-scatter-line % xScale yScale percScale) [50 75 85])
+        group  (Plottable.Components.Group. (clj->js (cons plot lines)))
+        chart  (js/Plottable.Components.Table. (clj->js [[nil legend] [yAxis group] [nil xAxis]]))]
+    {:chart chart :dataset {:dataset pdata :lines lines}}))
+
+(defn update-scatter [dataset data]
+  (update-single-dataset (:dataset dataset) data))
+
+
+(defn scatter-graph [{:keys [data subprojects] :as props}]
+  (let [subprojects-only (remove #(= "overall-coverage" (first %)) data)]
+    [graph-wrapper
+     {:data subprojects-only}
+     #(make-scatter-graph subprojects-only subprojects)
+     update-scatter
+     "scatter-chart"]))
+
 
 (defn get-stacked [prj i ds]
   (let [data (second (js->clj prj))
@@ -205,11 +253,14 @@
   [(let [projects (re-frame/subscribe [:overall (:sort params) (:rev params)])]
     (fn []
       (let [data @projects
-            props {:data data} ;; needs to be a map!
+            project-names (map first data)
+            props {:data data :subprojects project-names} ;; needs to be a map!
             ]
         (if (not-empty data)
           [:div
+           [scatter-graph props]
            [overview-graph props]
+           [absolute-graph props] ;;needs to be a map for react props!
            [:div {:class "panel panel-default data"}
             [coverage-table data routes/home (merge {:sort "name" :rev "false"} params)]]]
           [:div "no data"]))))])
@@ -229,12 +280,13 @@
 ;;project
 
 (defn project-coverage
-  [name data params]
+  [name data params subprojects]
   [:div {:class "panel panel-default col-6-lg overview"}
    [:div {:class "panel-heading"} [:h2 name]]
    (if-not data
      "no data"
      [:div
+      [scatter-graph {:data data :subprojects subprojects}]
       [overview-graph {:data data}] ;;needs to be a map for react props!
       [absolute-graph {:data data}] ;;needs to be a map for react props!
       [coverage-table data #(routes/project (merge {:name name} %)) (merge {:sort "name" :rev "false"} params)]])])
@@ -261,7 +313,7 @@
     [re-com/v-box
      :class "row"
      :gap "1em"
-     :children [[project-coverage project-name  graph-data params]
+     :children [[project-coverage project-name graph-data params subprojects]
                 [project-history project-name subprojects]]]))
 
 
@@ -274,23 +326,26 @@
 
 ;; nav
 
-(defn project-link
-  ([name]
-   (project-link name {}))
-  ([name opts]
-   ^{:key name}
-   [:li opts
-    [re-com/hyperlink-href
-     :label [:span name]
-     :href (routes/project {:name name})]]))
+(defn project-link [name classes]
+  ^{:key name}
+  [:li {:class classes}
+   [re-com/hyperlink-href
+    :label [:span name]
+    :href (routes/project {:name name})]])
 
-(defn projects-nav []
-  (let [project-names (re-frame/subscribe [:project-names])]
+(defn make-nav-entry [name active]
+  (let [classes ["nav" (when (= name active) "active")]
+        class-str (str/join " " classes)]
+    (project-link name class-str)))
+
+
+(defn projects-nav [active]
+  [(let [project-names (re-frame/subscribe [:project-names])]
     (fn []
       [:ul {:class "nav navbar-nav"}
-       (map #(project-link % {:class "nav"}) @project-names)])))
+       (map #(make-nav-entry % active) @project-names)]))])
 
-(defn navbar []
+(defn navbar [active]
   [:nav {:class "navbar navbar-default"}
    [:div {:class "container-fluid"}
     [:div {:class "navbar-brand"}
@@ -298,10 +353,9 @@
       :label [:div
               [:span {:class "glyphicon glyphicon-text-width"}]
               [:span {:class "glyphicon glyphicon-ok"}]]
-      :href (routes/home)]
-     ]
+      :href (routes/home)]]
     [:div {:class "navbar-header navbar-links"}
-     [projects-nav]]]])
+     [projects-nav active]]]])
 
 
 ;; main
@@ -317,6 +371,6 @@
     (fn []
       [re-com/v-box
        :height "100%"
-       :children [[navbar]
+       :children [[navbar (:name @latest-params)]
                   [:div {:class "body container"}
                    [panels @active-panel @latest-params]]]])))
